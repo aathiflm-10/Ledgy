@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'connection/connection.dart' as conn;
 
 part 'app_database.g.dart';
 
@@ -212,11 +209,7 @@ class AppDatabase extends _$AppDatabase {
   );
 
   static QueryExecutor _openConnection(String uid) {
-    return LazyDatabase(() async {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'ledgy_$uid.db'));
-      return NativeDatabase(file);
-    });
+    return conn.openConnection(uid);
   }
 
   // ── SEEDING DEFAULT CATEGORIES ─────────────────────────────────────
@@ -224,8 +217,7 @@ class AppDatabase extends _$AppDatabase {
     final prefs = await SharedPreferences.getInstance();
     final seedKey = 'categoriesSeeded_$uid';
     final alreadySeeded = prefs.getBool(seedKey) ?? false;
-    if (alreadySeeded) return;
-
+    
     final defaultCategories = [
       {'id': 'cat_food', 'name': 'Food & Dining', 'icon': '🍴', 'color': '#F59E0B', 'type': 'expense', 'keywords': '["swiggy","zomato","pizza","restaurant","cafe","dunzo","blinkit","foodpanda"]'},
       {'id': 'cat_transport', 'name': 'Transport', 'icon': '🚗', 'color': '#3B82F6', 'type': 'expense', 'keywords': '["uber","ola","rapido","metro","bus","petrol","irctc","redbus","makemytrip"]'},
@@ -237,9 +229,20 @@ class AppDatabase extends _$AppDatabase {
       {'id': 'cat_edu', 'name': 'Education', 'icon': '📚', 'color': '#F97316', 'type': 'expense', 'keywords': '["school","college","tuition","udemy","coursera","fees"]'},
       {'id': 'cat_invest', 'name': 'Investment', 'icon': '📈', 'color': '#0EA5E9', 'type': 'expense', 'keywords': '["mutual fund","sip","zerodha","groww","fd","nps","stocks"]'},
       {'id': 'cat_salary', 'name': 'Salary', 'icon': '💰', 'color': '#22C55E', 'type': 'income', 'keywords': '["salary","credited","payroll","stipend","wages","bonus"]'},
-      {'id': 'cat_transfer', 'name': 'Transfer', 'icon': '🔁', 'color': '#94A3B8', 'type': 'both', 'keywords': '["transfer","neft","imps","rtgs","upi","paytm","phonepay","gpay"]'},
+      {'id': 'cat_gifts', 'name': 'Gifts & Cashbacks', 'icon': '🎁', 'color': '#D946EF', 'type': 'income', 'keywords': '["gift","cashback","refund","reward","friend","received"]'},
+      {'id': 'cat_transfer', 'name': 'Transfer', 'icon': '🔁', 'color': '#94A3B8', 'type': 'both', 'keywords': '["transfer","neft","imps","rtgs","upi","gpay","phonepe"]'},
       {'id': 'cat_other', 'name': 'Other', 'icon': '📌', 'color': '#64748B', 'type': 'both', 'keywords': '[]'},
     ];
+
+    if (alreadySeeded) {
+      // Just ensure cat_gifts is present for existing users who already seeded
+      await customStatement(
+        'INSERT OR IGNORE INTO categories (id, user_id, name, icon, color, type, keywords, is_custom, is_synced, is_deleted) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)',
+        ['cat_gifts', uid, 'Gifts & Cashbacks', '🎁', '#D946EF', 'income', '["gift","cashback","refund","reward","friend","received"]']
+      );
+      return;
+    }
 
     await transaction(() async {
       for (final cat in defaultCategories) {

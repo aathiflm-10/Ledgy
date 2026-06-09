@@ -176,12 +176,21 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Text(goal.icon, style: const TextStyle(fontSize: 20)),
-                                const SizedBox(width: 8),
-                                Text(goal.name, style: theme.textTheme.titleSmall),
-                              ],
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Text(goal.icon, style: const TextStyle(fontSize: 20)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      goal.name,
+                                      style: theme.textTheme.titleSmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 18),

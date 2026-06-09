@@ -78,6 +78,15 @@ class NotificationService {
     );
   }
 
+  static Future<void> showSmsDisabledAlert() async {
+    await showNotification(
+      id: 104,
+      title: '⚡ Bank SMS Detected',
+      body: 'Enable auto-detection to log transactions automatically.',
+      payload: '/settings/sms',
+    );
+  }
+
   static Future<void> showBudgetAlert(String categoryName, int percent) async {
     await showNotification(
       id: 102,

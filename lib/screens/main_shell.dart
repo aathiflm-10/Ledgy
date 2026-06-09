@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'sms_review/sms_review_screen.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   int _getSelectedIndex(String location) {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/transactions')) return 1;
@@ -46,6 +48,9 @@ class _MainShellState extends State<MainShell> {
     final routerState = GoRouterState.of(context);
     final selectedIndex = _getSelectedIndex(routerState.matchedLocation);
 
+    final pendingTxns = ref.watch(pendingSmsTransactionsProvider).value ?? [];
+    final pendingCount = pendingTxns.length;
+
     return Scaffold(
       body: widget.child,
       bottomNavigationBar: Container(
@@ -76,13 +81,15 @@ class _MainShellState extends State<MainShell> {
               label: 'History',
             ),
             NavigationDestination(
-              icon: Badge(
-                label: const Text('New'),
-                backgroundColor: theme.colorScheme.error,
-                child: const Icon(Icons.sms_outlined),
-              ),
+              icon: pendingCount > 0
+                  ? Badge(
+                      label: Text('$pendingCount'),
+                      backgroundColor: theme.colorScheme.error,
+                      child: const Icon(Icons.sms_outlined),
+                    )
+                  : const Icon(Icons.sms_outlined),
               selectedIcon: const Icon(Icons.sms, color: Color(0xFF1DB87A)),
-              label: 'SMS Audit',
+              label: 'Review',
             ),
             const NavigationDestination(
               icon: Icon(Icons.insights_outlined),

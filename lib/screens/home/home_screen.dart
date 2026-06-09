@@ -12,7 +12,7 @@ import '../../core/formatters.dart';
 import '../../core/extensions.dart';
 import '../../main.dart';
 import '../transactions/transaction_bottom_sheet.dart';
-
+import '../notifications/notifications_screen.dart';
 import '../../services/recurring_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -104,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Text('Budgets', style: theme.textTheme.titleMedium),
                     TextButton(
-                      onPressed: () => context.go('/settings/budgets'),
+                      onPressed: () => context.push('/settings/budgets'),
                       child: const Text('View All'),
                     ),
                   ],
@@ -162,32 +162,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // ── HEADER ─────────────────────────────────────────────────────────
   Widget _buildHeader(ThemeData theme) {
-    final user = ref.read(currentUserProvider);
+    final user = ref.watch(currentUserProvider);
     final String greetingName = user?.displayName ?? 'Guest';
+    final uid = ref.watch(currentUidProvider);
+    final notificationsAsync = ref.watch(notificationsProvider);
+    final notifications = notificationsAsync.value ?? [];
+    final readIds = ref.watch(readNotificationIdsProvider(uid));
+    final unreadCount = notifications.where((n) => !readIds.contains(n.id)).length;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hello,',
-              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
-            ),
-            Text(
-              greetingName,
-              style: theme.textTheme.titleMedium?.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hello,',
+                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+              ),
+              Text(
+                greetingName,
+                style: theme.textTheme.titleMedium?.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: 16),
         IconButton(
           icon: Badge(
-            isLabelVisible: true,
-            backgroundColor: theme.colorScheme.primary,
+            isLabelVisible: unreadCount > 0,
+            label: Text('$unreadCount'),
+            backgroundColor: theme.colorScheme.error,
             child: const Icon(Icons.notifications_none_outlined, size: 28),
           ),
-          onPressed: () {},
+          onPressed: () => context.push('/notifications'),
         ),
       ],
     ).animate().fadeIn(duration: 400.ms);
@@ -431,13 +442,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Text(cat.icon, style: const TextStyle(fontSize: 20)),
-                        const SizedBox(width: 8),
-                        Text(cat.name, style: theme.textTheme.titleSmall),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(cat.icon, style: const TextStyle(fontSize: 20)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              cat.name,
+                              style: theme.textTheme.titleSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 16),
                     Text(
                       '${Formatters.formatCurrency(spent, symbol: _currencySymbol)} / ${Formatters.formatCurrency(budget.limitAmount, symbol: _currencySymbol)}',
                       style: TextStyle(

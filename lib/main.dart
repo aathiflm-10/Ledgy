@@ -11,17 +11,17 @@ import 'theme/app_theme.dart';
 import 'providers/db_provider.dart';
 import 'providers/auth_provider.dart';
 import 'services/sms_service.dart';
+import 'providers/theme_provider.dart';
 
 // Global flag to track Firebase initialization success
 bool isFirebaseAvailable = false;
 late SharedPreferences globalPrefs;
 
-void main() async {
-  // 1. Auth Race Condition Fix & Native binding initialization
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // 2. Run Zoned Guarded for Global Crash Safety
+void main() {
+  // 1. Run Zoned Guarded for Global Crash Safety
   runZonedGuarded(() async {
+    // 2. Auth Race Condition Fix & Native binding initialization
+    WidgetsFlutterBinding.ensureInitialized();
     // 3. Initialize Shared Preferences
     try {
       globalPrefs = await SharedPreferences.getInstance();
@@ -109,12 +109,13 @@ class _LedgyAppState extends ConsumerState<LedgyApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Ledgy Finance',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

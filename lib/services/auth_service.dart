@@ -30,6 +30,8 @@ class AuthService {
   static final StreamController<SimulatedUser?> _simulatedAuthStream = StreamController<SimulatedUser?>.broadcast();
   static SimulatedUser? _currentSimulatedUser;
 
+  late final Stream<SimulatedUser?> _combinedAuthStream;
+
   AuthService() {
     if (!isFirebaseAvailable) {
       // Check if there was a saved simulated user session
@@ -40,25 +42,53 @@ class AuthService {
           email: globalPrefs.getString('simulated_email') ?? 'offline@ledgy.com',
           displayName: globalPrefs.getString('simulated_name') ?? 'Offline User',
         );
-        _simulatedAuthStream.add(_currentSimulatedUser);
+      }
+    }
+
+    if (isFirebaseAvailable) {
+      final controller = StreamController<SimulatedUser?>.broadcast();
+      
+      // Emit initial value asynchronously
+      Timer.run(() {
+        if (_auth!.currentUser != null) {
+          controller.add(SimulatedUser(
+            uid: _auth!.currentUser!.uid,
+            email: _auth!.currentUser!.email,
+            displayName: _auth!.currentUser!.displayName,
+          ));
+        } else {
+          controller.add(null);
+        }
+      });
+
+      _auth!.authStateChanges().listen((user) {
+        if (user == null) {
+          controller.add(null);
+        } else {
+          controller.add(SimulatedUser(
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+          ));
+        }
+      });
+
+      _simulatedAuthStream.stream.listen((user) {
+        controller.add(user);
+      });
+
+      _combinedAuthStream = controller.stream;
+    } else {
+      _combinedAuthStream = _simulatedAuthStream.stream;
+      if (_currentSimulatedUser != null) {
+        Timer.run(() {
+          _simulatedAuthStream.add(_currentSimulatedUser);
+        });
       }
     }
   }
 
-  Stream<SimulatedUser?> get authStateChanges {
-    if (isFirebaseAvailable) {
-      return _auth!.authStateChanges().map((user) {
-        if (user == null) return null;
-        return SimulatedUser(
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-        );
-      });
-    } else {
-      return _simulatedAuthStream.stream;
-    }
-  }
+  Stream<SimulatedUser?> get authStateChanges => _combinedAuthStream;
 
   SimulatedUser? get currentSimulatedUser {
     if (isFirebaseAvailable) {
@@ -178,6 +208,7 @@ class AuthService {
       await _auth!.signOut();
       try {
         await GoogleSignIn().signOut();
+        await GoogleSignIn().disconnect();
       } catch (_) {}
     } else {
       await globalPrefs.remove('simulated_uid');
@@ -191,6 +222,39 @@ class AuthService {
     // Clear standard local preferences
     await globalPrefs.remove('selectedTheme');
     await globalPrefs.remove('currency');
+  }
+
+  // ── UPDATE DISPLAY NAME ────────────────────────────────────────────
+  Future<void> updateDisplayName(String name) async {
+    if (isFirebaseAvailable) {
+      final user = _auth!.currentUser;
+      if (user != null) {
+        await user.updateDisplayName(name.trim());
+        await user.reload();
+        // Update in Firestore
+        await _firestore!.collection('users').doc(user.uid).update({
+          'name': name.trim(),
+        });
+        
+        final updated = SimulatedUser(
+          uid: user.uid,
+          email: user.email,
+          displayName: name.trim(),
+        );
+        _simulatedAuthStream.add(updated);
+      }
+    } else {
+      final uid = currentSimulatedUser?.uid;
+      if (uid != null) {
+        await globalPrefs.setString('simulated_name', name.trim());
+        _currentSimulatedUser = SimulatedUser(
+          uid: uid,
+          email: _currentSimulatedUser?.email ?? 'offline@ledgy.com',
+          displayName: name.trim(),
+        );
+        _simulatedAuthStream.add(_currentSimulatedUser);
+      }
+    }
   }
 
   // ── PASSWORD RESET ─────────────────────────────────────────────────
@@ -218,10 +282,12 @@ class AuthService {
     }
 
     // Delete local DB file
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'ledgy_$uid.db'));
-    if (await file.exists()) {
-      await file.delete();
+    if (!kIsWeb) {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dir.path, 'ledgy_$uid.db'));
+      if (await file.exists()) {
+        await file.delete();
+      }
     }
   }
 

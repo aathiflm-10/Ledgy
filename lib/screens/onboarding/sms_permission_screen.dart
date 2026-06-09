@@ -88,17 +88,28 @@ class _SmsPermissionScreenState extends ConsumerState<SmsPermissionScreen> {
 
               // Privacy Notice Card
               Card(
-                color: Colors.amber.shade50.withOpacity(0.5),
+                color: theme.brightness == Brightness.dark
+                    ? const Color(0xFF2E240F) // Premium deep gold/amber background for dark mode
+                    : const Color(0xFFFFF8EC), // Soft off-white gold/amber background for light mode
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.amber.shade200),
+                  side: BorderSide(
+                    color: theme.brightness == Brightness.dark
+                        ? const Color(0xFFF5A623).withOpacity(0.3)
+                        : const Color(0xFFF5A623).withOpacity(0.25),
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.shield_outlined, color: Colors.amber.shade800),
+                      Icon(
+                        Icons.shield_outlined,
+                        color: theme.brightness == Brightness.dark
+                            ? const Color(0xFFFFD180)
+                            : const Color(0xFFC66900),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -107,15 +118,20 @@ class _SmsPermissionScreenState extends ConsumerState<SmsPermissionScreen> {
                             Text(
                               'Strict Privacy Guarantee',
                               style: theme.textTheme.titleSmall?.copyWith(
-                                color: Colors.amber.shade900,
+                                color: theme.brightness == Brightness.dark
+                                    ? const Color(0xFFFFD180)
+                                    : const Color(0xFFC66900),
                                 fontSize: 14,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               'We only parse financial transaction messages from bank senders. Your personal text messages are never read, stored, or sent to any server.',
                               style: TextStyle(
-                                color: Colors.amber.shade900.withOpacity(0.8),
+                                color: theme.brightness == Brightness.dark
+                                    ? const Color(0xFFFFD180).withOpacity(0.85)
+                                    : const Color(0xFFC66900).withOpacity(0.85),
                                 fontSize: 12,
                                 height: 1.4,
                               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 
 import '../../../db/app_database.dart';
 import '../../../providers/db_provider.dart';
@@ -34,125 +35,221 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
     String? selectedCatId = ruleToEdit?.categoryId;
     String selectedFrequency = ruleToEdit?.frequency ?? 'monthly';
     String selectedType = ruleToEdit?.type ?? 'expense';
+    DateTime selectedDate = ruleToEdit?.nextDueDate ?? DateTime.now();
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(ruleToEdit == null ? 'Set Recurring Rule' : 'Edit Recurring Rule'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    validator: (value) => value == null || value.trim().isEmpty ? 'Enter name' : null,
-                    decoration: const InputDecoration(labelText: 'Name', hintText: 'e.g. Netflix, Rent, Salary'),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            String recurrenceText = '';
+            final dayOfWeekName = DateFormat('EEEE').format(selectedDate);
+            final dayOfMonth = selectedDate.day;
+            final monthAndDay = DateFormat('MMMM d').format(selectedDate);
+
+            if (selectedFrequency == 'daily') {
+              recurrenceText = 'Repeats daily';
+            } else if (selectedFrequency == 'weekly') {
+              recurrenceText = 'Repeats weekly every $dayOfWeekName';
+            } else if (selectedFrequency == 'monthly') {
+              String suffix = 'th';
+              if (dayOfMonth == 1 || dayOfMonth == 21 || dayOfMonth == 31) suffix = 'st';
+              else if (dayOfMonth == 2 || dayOfMonth == 22) suffix = 'nd';
+              else if (dayOfMonth == 3 || dayOfMonth == 23) suffix = 'rd';
+              recurrenceText = 'Repeats monthly on $dayOfMonth$suffix of every month';
+            } else if (selectedFrequency == 'yearly') {
+              recurrenceText = 'Repeats yearly on $monthAndDay';
+            }
+
+            return AlertDialog(
+              title: Text(ruleToEdit == null ? 'Set Recurring Rule' : 'Edit Recurring Rule'),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        validator: (value) => value == null || value.trim().isEmpty ? 'Enter name' : null,
+                        decoration: const InputDecoration(labelText: 'Name', hintText: 'e.g. Netflix, Rent, Salary'),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: selectedCatId,
+                        onChanged: (val) => setDialogState(() => selectedCatId = val),
+                        validator: (value) => value == null ? 'Select category' : null,
+                        decoration: const InputDecoration(labelText: 'Category'),
+                        items: cats.map((cat) {
+                          return DropdownMenuItem(
+                            value: cat.id,
+                            child: Row(
+                              children: [
+                                Text(cat.icon),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    cat.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'Enter amount';
+                          if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                            return 'Enter a valid amount';
+                          }
+                          return null;
+                        },
+                        decoration: const InputDecoration(labelText: 'Amount', prefixText: '₹ '),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedType,
+                        onChanged: (val) => setDialogState(() => selectedType = val ?? 'expense'),
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        items: const [
+                          DropdownMenuItem(value: 'expense', child: Text('Expense')),
+                          DropdownMenuItem(value: 'income', child: Text('Income')),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedFrequency,
+                        onChanged: (val) => setDialogState(() {
+                          selectedFrequency = val ?? 'monthly';
+                          if (selectedFrequency == 'daily') {
+                            selectedDate = DateTime.now();
+                          }
+                        }),
+                        decoration: const InputDecoration(labelText: 'Frequency'),
+                        items: const [
+                          DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                          DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                          DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                          DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
+                        ],
+                      ),
+                      if (selectedFrequency != 'daily') ...[
+                        const SizedBox(height: 16),
+                      ],
+                      if (selectedFrequency != 'daily')
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                              lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                selectedDate = picked;
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                            decoration: BoxDecoration(
+                              border: Border(bottom: BorderSide(color: Colors.grey.shade400, width: 1)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Start / Next Due Date',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('MMM dd, yyyy').format(selectedDate),
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const Icon(Icons.calendar_today, color: Colors.grey, size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (recurrenceText.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            recurrenceText,
+                            style: const TextStyle(fontSize: 12, color: Colors.teal, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedCatId,
-                    onChanged: (val) => selectedCatId = val,
-                    validator: (value) => value == null ? 'Select category' : null,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: cats.map((cat) {
-                      return DropdownMenuItem(
-                        value: cat.id,
-                        child: Row(
-                          children: [
-                            Text(cat.icon),
-                            const SizedBox(width: 8),
-                            Text(cat.name),
-                          ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate() || selectedCatId == null) return;
+                    
+                    final name = nameController.text.trim();
+                    final amount = double.parse(amountController.text);
+
+                    if (ruleToEdit == null) {
+                      final id = _uuid.v4();
+                      await db.into(db.recurringRules).insert(
+                        RecurringRulesCompanion.insert(
+                          id: id,
+                          userId: uid,
+                          name: name,
+                          categoryId: selectedCatId!,
+                          amount: amount,
+                          type: selectedType,
+                          frequency: selectedFrequency,
+                          nextDueDate: selectedDate,
+                          isActive: const drift.Value(true),
+                          isSynced: const drift.Value(false),
                         ),
                       );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) return 'Enter amount';
-                      if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                        return 'Enter a valid amount';
-                      }
-                      return null;
-                    },
-                    decoration: const InputDecoration(labelText: 'Amount', prefixText: '₹ '),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedType,
-                    onChanged: (val) => selectedType = val ?? 'expense',
-                    decoration: const InputDecoration(labelText: 'Type'),
-                    items: const [
-                      DropdownMenuItem(value: 'expense', child: Text('Expense')),
-                      DropdownMenuItem(value: 'income', child: Text('Income')),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedFrequency,
-                    onChanged: (val) => selectedFrequency = val ?? 'monthly',
-                    decoration: const InputDecoration(labelText: 'Frequency'),
-                    items: const [
-                      DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                      DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
-                      DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate() || selectedCatId == null) return;
-                
-                final name = nameController.text.trim();
-                final amount = double.parse(amountController.text);
-                final today = DateTime.now().toUtc();
+                    } else {
+                      await db.update(db.recurringRules).replace(
+                        ruleToEdit.copyWith(
+                          name: name,
+                          categoryId: selectedCatId!,
+                          amount: amount,
+                          type: selectedType,
+                          frequency: selectedFrequency,
+                          nextDueDate: selectedDate,
+                          isSynced: false,
+                        ),
+                      );
+                    }
 
-                if (ruleToEdit == null) {
-                  final id = _uuid.v4();
-                  await db.into(db.recurringRules).insert(
-                    RecurringRulesCompanion.insert(
-                      id: id,
-                      userId: uid,
-                      name: name,
-                      categoryId: selectedCatId!,
-                      amount: amount,
-                      type: selectedType,
-                      frequency: selectedFrequency,
-                      nextDueDate: today, // evaluated on next check
-                      isActive: const drift.Value(true),
-                      isSynced: const drift.Value(false),
-                    ),
-                  );
-                } else {
-                  await db.update(db.recurringRules).replace(
-                    ruleToEdit.copyWith(
-                      name: name,
-                      categoryId: selectedCatId!,
-                      amount: amount,
-                      type: selectedType,
-                      frequency: selectedFrequency,
-                      isSynced: false,
-                    ),
-                  );
-                }
-
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('Save Rule'),
-            ),
-          ],
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Save Rule'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

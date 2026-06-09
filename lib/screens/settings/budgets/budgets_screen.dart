@@ -20,9 +20,15 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
 
   // ── OPEN SET BUDGET DIALOG ─────────────────────────────────────────
   void _openSetBudgetDialog(AppDatabase db, String uid, {Budget? budgetToEdit}) async {
-    final cats = await (db.select(db.categories)
+    final rawCats = await (db.select(db.categories)
           ..where((tbl) => tbl.userId.equals(uid) & tbl.isDeleted.equals(false)))
         .get();
+
+    final excludedNames = {'salary', 'transfer', 'gifts & cashbacks', 'gifts', 'cashback'};
+    final cats = rawCats.where((cat) {
+      final nameLower = cat.name.toLowerCase().trim();
+      return !excludedNames.contains(nameLower);
+    }).toList();
 
     if (!mounted) return;
 
@@ -43,6 +49,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: selectedCatId,
                   onChanged: budgetToEdit != null ? null : (val) => selectedCatId = val,
                   validator: (value) => value == null ? 'Select category' : null,
@@ -54,7 +61,12 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                         children: [
                           Text(cat.icon),
                           const SizedBox(width: 8),
-                          Text(cat.name),
+                          Expanded(
+                            child: Text(
+                              cat.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     );

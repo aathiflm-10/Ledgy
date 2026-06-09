@@ -5,6 +5,8 @@ import '../db/app_database.dart';
 import 'sms_parser.dart';
 import 'sms_deduplication_service.dart';
 import 'categorization_service.dart';
+import '../main.dart';
+import 'notification_service.dart';
 
 class SmsService {
   final AppDatabase _db;
@@ -72,6 +74,26 @@ class SmsService {
       return;
     }
 
+    // Check if auto-detection is enabled
+    final bool detectionEnabled = globalPrefs.getBool('smsDetectionEnabled_$uid') ?? true;
+    if (!detectionEnabled) {
+      await NotificationService.showSmsDisabledAlert();
+      await _db.update(_db.rawSmsMessages).replace(
+        RawSmsMessagesCompanion(
+          id: Value(rawSmsId),
+          userId: Value(uid),
+          sender: Value(sender),
+          body: Value(body),
+          receivedAt: Value(timestamp),
+          status: const Value('failed'),
+          failReason: const Value('SMS auto-detection is disabled in settings.'),
+          fingerprint: Value(fingerprint),
+          createdAt: Value(DateTime.now()),
+        ),
+      );
+      return;
+    }
+
     // 2. Perform Deduplication check
     final txnId = _uuid.v4();
     final isDuplicate = await _dedupeService.checkAndRegister(
@@ -101,6 +123,11 @@ class SmsService {
     // 3. Auto-Categorize intelligently
     final categoryResult = await _categorizationService.classify(parsed.merchantHint, uid);
 
+    final bool autoConfirm = globalPrefs.getBool('autoConfirmHighConfidence_$uid') ?? true;
+    final bool isConfirmed = autoConfirm &&
+        parsed.confidence == 'high' &&
+        categoryResult.confidence == 'high';
+
     // 4. Auto-Create transaction in Drift
     await _db.transaction(() async {
       await _db.into(_db.transactions).insert(
@@ -118,9 +145,7 @@ class SmsService {
           confidence: parsed.confidence == 'high' && categoryResult.confidence == 'high'
               ? 'high'
               : categoryResult.confidence,
-          status: parsed.confidence == 'high' && categoryResult.confidence == 'high'
-              ? 'confirmed'
-              : 'pending',
+          status: isConfirmed ? 'confirmed' : 'pending',
           isRecurring: const Value(false),
           isSynced: const Value(false),
           createdAt: DateTime.now(),
@@ -143,6 +168,18 @@ class SmsService {
         ),
       );
     });
+
+    // 6. Trigger notifications
+    if (isConfirmed) {
+      await NotificationService.showNotification(
+        id: 101,
+        title: '⚡ Transaction Logged',
+        body: 'Instantly logged ₹${parsed.amount.toStringAsFixed(0)} at ${parsed.merchantHint}.',
+        payload: '/transactions',
+      );
+    } else {
+      await NotificationService.showSmsDetected(parsed.amount, parsed.merchantHint);
+    }
 
     debugPrint('Successfully processed SMS transaction: ₹${parsed.amount} at ${parsed.merchantHint}');
   }

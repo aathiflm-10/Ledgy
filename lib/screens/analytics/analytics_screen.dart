@@ -216,7 +216,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: const Center(child: Text('No expenses recorded for this month.', style: TextStyle(color: Colors.grey))),
       );
@@ -287,13 +287,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   // ── LINE CHART RENDER ──────────────────────────────────────────────
   Widget _buildLineChart(ThemeData theme) {
-    if (_dailyTotals.isEmpty) {
+    if (_dailyTotals.length < 2) {
       return Container(
         height: 180,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: const Center(child: Text('Insufficient logs to chart trends.', style: TextStyle(color: Colors.grey))),
       );
@@ -353,7 +353,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: theme.dividerColor),
           ),
           child: Row(
             children: [

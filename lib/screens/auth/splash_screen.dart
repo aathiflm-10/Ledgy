@@ -26,7 +26,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       
       final user = ref.read(currentUserProvider);
       if (user == null) {
-        context.go('/login');
+        final hasOpenedBefore = globalPrefs.getBool('has_opened_before') ?? false;
+        if (!hasOpenedBefore) {
+          globalPrefs.setBool('has_opened_before', true);
+          context.go('/signup');
+        } else {
+          context.go('/login');
+        }
       } else {
         final hasOnboarded = globalPrefs.getBool('hasOnboarded_${user.uid}') ?? false;
         if (!hasOnboarded) {

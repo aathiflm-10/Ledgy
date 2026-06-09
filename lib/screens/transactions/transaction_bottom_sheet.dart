@@ -98,11 +98,40 @@ class _TransactionBottomSheetState extends State<TransactionBottomSheet> {
             orElse: () => list.first,
           );
           _selectedCategoryId = firstMatch.id;
+        } else if (_selectedCategoryId != null && list.isNotEmpty) {
+          final valid = list.any((c) => c.id == _selectedCategoryId && (c.type == _type || c.type == 'both'));
+          if (!valid) {
+            final firstMatch = list.firstWhere(
+              (c) => c.type == _type || c.type == 'both',
+              orElse: () => list.first,
+            );
+            _selectedCategoryId = firstMatch.id;
+          }
         }
       });
     } catch (e) {
       debugPrint('Error loading categories: $e');
     }
+  }
+
+  void _onTypeChanged(String newType) {
+    if (_type == newType) return;
+    setState(() {
+      _type = newType;
+      
+      final validCats = _categories.where((c) => newType == 'income'
+          ? (c.type == 'income' || c.type == 'both')
+          : (c.type == 'expense' || c.type == 'both')).toList();
+          
+      if (validCats.isNotEmpty) {
+        final containsCurrent = validCats.any((c) => c.id == _selectedCategoryId);
+        if (!containsCurrent) {
+          _selectedCategoryId = validCats.first.id;
+        }
+      } else {
+        _selectedCategoryId = null;
+      }
+    });
   }
 
   // ── SAVE TRANSACTION HANDLER ───────────────────────────────────────
@@ -192,206 +221,214 @@ class _TransactionBottomSheetState extends State<TransactionBottomSheet> {
     final theme = Theme.of(context);
     final isEdit = widget.transactionToEdit != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Slide Bar Indicator
-            Center(
-              child: Container(
-                width: 48,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Header Title
-            Text(
-              isEdit ? 'Edit Transaction' : 'New Transaction',
-              style: theme.textTheme.titleMedium?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-
-            // ── TYPE TOGGLE CAPSULES ──────────────────────────────────
-            Row(
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _type = 'expense';
-                        _loadCategories();
-                      });
-                    },
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: _type == 'expense' ? theme.colorScheme.error : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Expense',
-                          style: TextStyle(
-                            color: _type == 'expense' ? Colors.white : Colors.grey.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                // Slide Bar Indicator
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _type = 'income';
-                        _loadCategories();
-                      });
-                    },
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: _type == 'income' ? theme.primaryColor : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Income',
-                          style: TextStyle(
-                            color: _type == 'income' ? Colors.white : Colors.grey.shade700,
-                            fontWeight: FontWeight.bold,
+                const SizedBox(height: 16),
+
+                // Header Title
+                Text(
+                  isEdit ? 'Edit Transaction' : 'New Transaction',
+                  style: theme.textTheme.titleMedium?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+
+                // ── TYPE TOGGLE CAPSULES ──────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _onTypeChanged('expense'),
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: _type == 'expense' ? theme.colorScheme.error : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Expense',
+                              style: TextStyle(
+                                color: _type == 'expense' ? Colors.white : Colors.grey.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _onTypeChanged('income'),
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: _type == 'income' ? theme.primaryColor : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Income',
+                              style: TextStyle(
+                                color: _type == 'income' ? Colors.white : Colors.grey.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── AMOUNT INPUT ──────────────────────────────────────────
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Enter transaction amount';
+                    final val = double.tryParse(value);
+                    if (val == null || val <= 0) return 'Enter a valid amount';
+                    return null;
+                  },
+                  decoration: const InputDecoration(
+                    prefixText: '₹ ',
+                    prefixStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    labelText: 'Amount',
+                    hintText: '0.00',
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── CATEGORY PICKER ───────────────────────────────────────
+                _isLoadingCategories
+                    ? const LinearProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: _selectedCategoryId,
+                        onChanged: (val) => setState(() => _selectedCategoryId = val),
+                        validator: (value) => value == null ? 'Select category' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          prefixIcon: Icon(Icons.category_outlined),
+                        ),
+                        items: _categories
+                            .where((cat) => _type == 'income'
+                                ? (cat.type == 'income' || cat.type == 'both')
+                                : (cat.type == 'expense' || cat.type == 'both'))
+                            .map((cat) {
+                          return DropdownMenuItem<String>(
+                            value: cat.id,
+                            child: Row(
+                              children: [
+                                Text(cat.icon, style: const TextStyle(fontSize: 16)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    cat.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                const SizedBox(height: 16),
+
+                // ── DATE SELECTOR ─────────────────────────────────────────
+                InkWell(
+                  onTap: _selectDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.grey),
+                            const SizedBox(width: 12),
+                            Text(
+                              DateFormat('d MMMM yyyy').format(_selectedDate),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── MERCHANT / SOURCE ─────────────────────────────────────
+                TextFormField(
+                  controller: _merchantController,
+                  decoration: InputDecoration(
+                    labelText: _type == 'income' ? 'Received From (Sender)' : 'Merchant / Payee Name',
+                    prefixIcon: Icon(_type == 'income' ? Icons.person_outline : Icons.storefront_outlined),
+                    hintText: _type == 'income' ? 'e.g. Friend, Office, Client' : 'e.g. Swiggy, Uber, Rent',
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── NOTES ─────────────────────────────────────────────────
+                TextFormField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    prefixIcon: Icon(Icons.notes_outlined),
+                    hintText: 'Additional remarks...',
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // ── SAVE BUTTON ───────────────────────────────────────────
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _saveTransaction,
+                    child: Text(isEdit ? 'Save Changes' : 'Record Transaction'),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // ── AMOUNT INPUT ──────────────────────────────────────────
-            TextFormField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Enter transaction amount';
-                final val = double.tryParse(value);
-                if (val == null || val <= 0) return 'Enter a valid amount';
-                return null;
-              },
-              decoration: const InputDecoration(
-                prefixText: '₹ ',
-                prefixStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                labelText: 'Amount',
-                hintText: '0.00',
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ── CATEGORY PICKER ───────────────────────────────────────
-            _isLoadingCategories
-                ? const LinearProgressIndicator()
-                : DropdownButtonFormField<String>(
-                    value: _selectedCategoryId,
-                    onChanged: (val) => setState(() => _selectedCategoryId = val),
-                    validator: (value) => value == null ? 'Select category' : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      prefixIcon: Icon(Icons.category_outlined),
-                    ),
-                    items: _categories.map((cat) {
-                      return DropdownMenuItem<String>(
-                        value: cat.id,
-                        child: Row(
-                          children: [
-                            Text(cat.icon, style: const TextStyle(fontSize: 16)),
-                            const SizedBox(width: 8),
-                            Text(cat.name),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-            const SizedBox(height: 16),
-
-            // ── DATE SELECTOR ─────────────────────────────────────────
-            InkWell(
-              onTap: _selectDate,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.grey),
-                        const SizedBox(width: 12),
-                        Text(
-                          DateFormat('d MMMM yyyy').format(_selectedDate),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ── MERCHANT / SOURCE ─────────────────────────────────────
-            TextFormField(
-              controller: _merchantController,
-              decoration: const InputDecoration(
-                labelText: 'Merchant / Payee Name',
-                prefixIcon: Icon(Icons.storefront_outlined),
-                hintText: 'e.g. Swiggy, Uber, Rent',
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ── NOTES ─────────────────────────────────────────────────
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                prefixIcon: Icon(Icons.notes_outlined),
-                hintText: 'Additional remarks...',
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── SAVE BUTTON ───────────────────────────────────────────
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _saveTransaction,
-                child: Text(isEdit ? 'Save Changes' : 'Record Transaction'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

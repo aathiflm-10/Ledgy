@@ -7,6 +7,73 @@ import '../../providers/auth_provider.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
+  // ── EDIT PROFILE NAME DIALOG ───────────────────────────────────────
+  void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName) {
+    final nameController = TextEditingController(text: currentName);
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Profile Name'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'Preferred Name',
+              hintText: 'Enter your name',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Name cannot be empty';
+              }
+              if (value.trim().length < 2) {
+                return 'Name is too short';
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+              final newName = nameController.text.trim();
+              Navigator.pop(context);
+              try {
+                await ref.read(authServiceProvider).updateDisplayName(newName);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile name updated successfully.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update name: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── TRIGGER ACCOUNT DELETION ───────────────────────────────────────
   void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -65,7 +132,9 @@ class SettingsScreen extends ConsumerWidget {
                     backgroundColor: theme.primaryColor.withOpacity(0.12),
                     radius: 28,
                     child: Text(
-                      user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+                      user?.displayName != null && user!.displayName!.isNotEmpty
+                          ? user.displayName!.substring(0, 1).toUpperCase()
+                          : 'U',
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: theme.primaryColor),
                     ),
                   ),
@@ -74,9 +143,20 @@ class SettingsScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          user?.displayName ?? 'User Profile',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                user?.displayName ?? 'User Profile',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+                              onPressed: () => _showEditNameDialog(context, ref, user?.displayName ?? ''),
+                            ),
+                          ],
                         ),
                         Text(
                           user?.email ?? 'offline@ledgy.com',
@@ -98,19 +178,19 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.currency_exchange,
             title: 'Monthly Budgets',
             subtitle: 'Set limits for food, shopping, transit',
-            onTap: () => context.go('/settings/budgets'),
+            onTap: () => context.push('/settings/budgets'),
           ),
           _buildSettingsTile(
             icon: Icons.track_changes,
             title: 'Savings Goals',
             subtitle: 'Track progress for milestones',
-            onTap: () => context.go('/settings/goals'),
+            onTap: () => context.push('/settings/goals'),
           ),
           _buildSettingsTile(
             icon: Icons.repeat,
             title: 'Recurring Rules',
             subtitle: 'Subscriptions, salaries, utility schedules',
-            onTap: () => context.go('/settings/recurring'),
+            onTap: () => context.push('/settings/recurring'),
           ),
           
           const SizedBox(height: 24),
@@ -122,13 +202,13 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.sms_outlined,
             title: 'SMS Auto-Detection',
             subtitle: 'Real-time bank intercept parameters',
-            onTap: () => context.go('/settings/sms'),
+            onTap: () => context.push('/settings/sms'),
           ),
           _buildSettingsTile(
             icon: Icons.color_lens_outlined,
-            title: 'Theme & Typography',
-            subtitle: 'Appearance options',
-            onTap: () => context.go('/settings/appearance'),
+            title: 'Theme',
+            subtitle: 'Choose dark or light mode',
+            onTap: () => context.push('/settings/appearance'),
           ),
 
           const SizedBox(height: 24),

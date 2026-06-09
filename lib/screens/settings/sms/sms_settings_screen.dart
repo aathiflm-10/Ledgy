@@ -29,11 +29,15 @@ class _SmsSettingsScreenState extends ConsumerState<SmsSettingsScreen> {
   void _updateSettings(String key, bool value) async {
     final uid = ref.read(currentUidProvider);
     setState(() {
-      if (key == 'detection') _smsDetectionEnabled = value;
-      if (key == 'autoconfirm') _autoConfirmHighConfidence = value;
+      if (key == 'detection') {
+        _smsDetectionEnabled = value;
+        globalPrefs.setBool('smsDetectionEnabled_$uid', value);
+      }
+      if (key == 'autoconfirm') {
+        _autoConfirmHighConfidence = value;
+        globalPrefs.setBool('autoConfirmHighConfidence_$uid', value);
+      }
     });
-
-    await globalPrefs.setBool('${key}Enabled_$uid', value);
   }
 
   // ── DEVELOPER SMS SIMULATOR UTILITY ────────────────────────────────
@@ -134,10 +138,22 @@ class _SmsSettingsScreenState extends ConsumerState<SmsSettingsScreen> {
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
-                    title: const Text('Auto-Confirm High Confidence'),
-                    subtitle: const Text('Instantly log high-precision transactions without review'),
+                    title: Text(
+                      'Auto-Confirm High Confidence',
+                      style: TextStyle(
+                        color: _smsDetectionEnabled ? null : theme.disabledColor,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Instantly log high-precision transactions without review',
+                      style: TextStyle(
+                        color: _smsDetectionEnabled ? null : theme.disabledColor,
+                      ),
+                    ),
                     value: _autoConfirmHighConfidence,
-                    onChanged: (val) => _updateSettings('autoconfirm', val),
+                    onChanged: _smsDetectionEnabled
+                        ? (val) => _updateSettings('autoconfirm', val)
+                        : null,
                     activeColor: theme.primaryColor,
                   ),
                 ],

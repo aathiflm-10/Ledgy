@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../main.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/theme_provider.dart';
 
 class AppearanceScreen extends ConsumerStatefulWidget {
   const AppearanceScreen({super.key});
@@ -24,11 +25,27 @@ class _AppearanceScreenState extends ConsumerState<AppearanceScreen> {
     setState(() => _selectedTheme = theme);
     await globalPrefs.setString('selectedTheme', theme);
     
-    // In a full implementation, you'd trigger a state notifier 
-    // to dynamically rebuild MaterialApp with the selected theme.
+    ThemeMode mode;
+    switch (theme) {
+      case 'light':
+        mode = ThemeMode.light;
+        break;
+      case 'dark':
+        mode = ThemeMode.dark;
+        break;
+      default:
+        mode = ThemeMode.system;
+    }
+    ref.read(themeModeProvider.notifier).state = mode;
+    
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Theme set to: ${theme.toUpperCase()} (Changes apply on restart)'), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text('Theme set to: ${theme.toUpperCase()}'), 
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+        ),
       );
     }
   }

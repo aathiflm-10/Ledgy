@@ -22,6 +22,7 @@ import '../screens/settings/goals/goals_screen.dart';
 import '../screens/settings/recurring/recurring_screen.dart';
 import '../screens/settings/appearance/appearance_screen.dart';
 import '../screens/settings/sms/sms_settings_screen.dart';
+import '../screens/notifications/notifications_screen.dart';
 
 // Helper class to adapt Dart Stream to GoRouter refresh Listenable
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -82,19 +83,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/transactions', builder: (_, __) => const TransactionsScreen()),
           GoRoute(path: '/sms-review', builder: (_, __) => const SmsReviewScreen()),
           GoRoute(path: '/analytics', builder: (_, __) => const AnalyticsScreen()),
-          GoRoute(
-            path: '/settings',
-            builder: (_, __) => const SettingsScreen(),
-            routes: [
-              GoRoute(path: 'budgets', builder: (_, __) => const BudgetsScreen()),
-              GoRoute(path: 'goals', builder: (_, __) => const GoalsScreen()),
-              GoRoute(path: 'recurring', builder: (_, __) => const RecurringScreen()),
-              GoRoute(path: 'appearance', builder: (_, __) => const AppearanceScreen()),
-              GoRoute(path: 'sms', builder: (_, __) => const SmsSettingsScreen()),
-            ],
-          ),
+          GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
         ],
       ),
+      GoRoute(path: '/settings/budgets', builder: (_, __) => const BudgetsScreen()),
+      GoRoute(path: '/settings/goals', builder: (_, __) => const GoalsScreen()),
+      GoRoute(path: '/settings/recurring', builder: (_, __) => const RecurringScreen()),
+      GoRoute(path: '/settings/appearance', builder: (_, __) => const AppearanceScreen()),
+      GoRoute(path: '/settings/sms', builder: (_, __) => const SmsSettingsScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
     ],
   );
 });

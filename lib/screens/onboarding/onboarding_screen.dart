@@ -66,17 +66,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Skip Button (Hidden on last page)
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: _currentPage < 2
-                    ? TextButton(
-                        onPressed: () => _pageController.jumpToPage(2),
-                        child: const Text('Skip'),
-                      )
-                    : const SizedBox(height: 48),
+            // Top Navigation Bar (Log Out & Skip)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: () async {
+                      await ref.read(authServiceProvider).logout();
+                      if (context.mounted) {
+                        context.go('/login');
+                      }
+                    },
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text('Sign Out'),
+                  ),
+                  _currentPage < 2
+                      ? TextButton(
+                          onPressed: () => _pageController.jumpToPage(2),
+                          child: const Text('Skip'),
+                        )
+                      : const SizedBox(width: 48, height: 48),
+                ],
               ),
             ),
 

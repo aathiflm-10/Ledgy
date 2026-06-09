@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -158,15 +159,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1DB87A),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
+                        child: Text(
                           'L',
-                          style: TextStyle(
-                            fontSize: 20,
+                          style: GoogleFonts.dmSerifDisplay(
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -174,10 +175,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'ledgy',
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        'edgy',
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
+                          letterSpacing: 0.5,
+                          color: theme.brightness == Brightness.dark ? Colors.white : Colors.black87,
                         ),
                       ),
                     ],
@@ -287,7 +290,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Google Sign In
                 OutlinedButton.icon(
                   onPressed: _isLoading ? null : _handleGoogleSignIn,
-                  icon: const Icon(Icons.g_mobiledata, size: 28),
+                  icon: const GoogleIcon(size: 20),
                   label: const Text('Continue with Google'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -325,6 +328,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class GoogleIcon extends StatelessWidget {
+  final double size;
+  const GoogleIcon({super.key, this.size = 20.0});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Image.network(
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Center(
+            child: Text(
+              'G',
+              style: TextStyle(
+                fontSize: size * 0.8,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF4285F4),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
